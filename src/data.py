@@ -37,8 +37,8 @@ def get_dataloaders(data_dir, val_split=0.2, batch_size=BATCH_SIZE, seed=42):
     
     val_dataset.dataset.transform = val_transform       #change the original dataset transform into validation transform
 
-    train_loader  = DataLoader(train_dataset, shuffle=True, batch_size=batch_size, num_workers=2)
-    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=2)
+    train_loader  = DataLoader(train_dataset, shuffle=True, batch_size=batch_size)
+    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
     class_name = full_dataset.classes
 
