@@ -13,4 +13,7 @@ LR = 0.001
 EPOCHS = 10
 PATIENCE = 4
 
+# eval
+EXPERIMENT_NAME = "waste-classification-cnn"
+
 

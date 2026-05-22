@@ -17,13 +17,11 @@ def train():
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
 
-    mlflow.set_experiment("waste-classification-cnn")
+    mlflow.set_experiment(EXPERIMENT_NAME)
 
     os.makedirs("models", exist_ok=True)
-    timestamp       = datetime.now().strftime("%Y%m%d_%H%M%S")
-    best_model_path = f"models/best_model_{timestamp}.pth"
 
-    best_acc = 0
+    best_acc = float('-inf')
     patience_counter = 0
 
     with mlflow.start_run(run_name=f"wasteCNN_lr{LR}_dropout{DROPOUT}"):
@@ -80,7 +78,8 @@ def train():
             if val_acc > best_acc:
                 best_acc = val_acc
                 patience_counter = 0
-                torch.save(model.state_dict(), best_model_path)
+                torch.save(model.state_dict(), "models/best_model.pth")
+                print(f"New best model saved! Val Acc: {best_acc:.2f}%")
             else:
                 patience_counter += 1
             
@@ -88,8 +87,8 @@ def train():
                 print(f"\n  Early stopping at epoch {epoch+1}")
                 break
 
-        model.load_state_dict(torch.load(best_model_path))
-        mlflow.pytorch.log_model(model, name=f"wasteCNN_run1_{timestamp}")
+        model.load_state_dict(torch.load("models/best_model.pth"))
+        mlflow.pytorch.log_model(model, name="best_model")
         mlflow.log_metric("best_val_accuracy",best_acc)
 
         print("Train Completed")
