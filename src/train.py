@@ -5,7 +5,7 @@ import os
 import mlflow.pytorch
 
 from src.data import *
-from src.config import *
+import src.config as cfg
 from src.model import WasteCNN
 from src.plot import plot_training_curves
 
@@ -13,41 +13,41 @@ def train():
     train_loader, val_loader, class_names, train_size, val_size = get_dataloaders("data")
     print(f"Train: {train_size} | Val: {val_size} | Classes: {class_names}")
 
-    model = WasteCNN().to(DEVICE)
+    model = WasteCNN().to(cfg.DEVICE)
     if os.path.exists("models/best_model.pth"):
         model.load_state_dict(torch.load("models/best_model.pth"))
         print("Loaded previous best model")
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+    optimizer = torch.optim.Adam(model.parameters(), lr=cfg.LR)
 
     train_losses = []
     val_losses = []
     train_accs = []
     val_accs = []
 
-    mlflow.set_experiment(EXPERIMENT_NAME)
+    mlflow.set_experiment(cfg.EXPERIMENT_NAME)
 
     os.makedirs("models", exist_ok=True)
 
     best_acc = float('-inf')
     patience_counter = 0
 
-    with mlflow.start_run(run_name=f"wasteCNN_lr{LR}_dropout{DROPOUT}5"):
+    with mlflow.start_run(run_name=cfg.RUN_NAME):
 
         mlflow.log_params({
-            "epochs":        EPOCHS,
-            "learning_rate": LR,
-            "dropout":       DROPOUT
+            "epochs":        cfg.EPOCHS,
+            "learning_rate": cfg.LR,
+            "dropout":       cfg.DROPOUT
         })
 
-        for epoch in range(EPOCHS):
+        for epoch in range(cfg.EPOCHS):
 
             model.train()
-            running_loss, correct = 0, 0
+            running_loss, correct = 0, 0    
 
             for images, labels in train_loader:
-                images, labels = images.to(DEVICE), labels.to(DEVICE)
+                images, labels = images.to(cfg.DEVICE), labels.to(cfg.DEVICE)
                 optimizer.zero_grad()
                 output = model(images)
                 loss = criterion(output, labels)
@@ -68,7 +68,7 @@ def train():
 
             with torch.no_grad():
                 for images, labels in val_loader:
-                    images, labels = images.to(DEVICE), labels.to(DEVICE)
+                    images, labels = images.to(cfg.DEVICE), labels.to(cfg.DEVICE)
                     output = model(images)
                     loss = criterion(output, labels)
                     val_loss_total += loss.item()
@@ -87,7 +87,7 @@ def train():
                 "val_acc":    val_acc,
             }, step=epoch)
 
-            print(f"Epoch {epoch+1:02d}/{EPOCHS} | "
+            print(f"Epoch {epoch+1:02d}/{cfg.EPOCHS} | "
                   f"Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.2f}% | "
                   f"Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.2f}%")
             
@@ -99,7 +99,7 @@ def train():
             else:
                 patience_counter += 1
             
-            if patience_counter >= PATIENCE:
+            if patience_counter >= cfg.PATIENCE:
                 print(f"\n  Early stopping at epoch {epoch+1}")
                 break
                 

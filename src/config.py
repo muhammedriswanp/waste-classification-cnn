@@ -15,5 +15,6 @@ PATIENCE = 4
 
 # eval
 EXPERIMENT_NAME = "waste-classification-cnn"
+RUN_NAME = f"wasteCNN_lr{LR}_dropout{DROPOUT}"
 
 

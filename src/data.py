@@ -1,6 +1,6 @@
 import torch
 from torchvision import transforms, datasets
-from torch.utils.data import random_split, DataLoader
+from torch.utils.data import DataLoader, Subset
 from src.config import *
 def get_transforms():
     train_transform = transforms.Compose([
@@ -25,24 +25,26 @@ def get_transforms():
 def get_dataloaders(data_dir, val_split=0.2, batch_size=BATCH_SIZE, seed=42):
     train_transform, val_transform = get_transforms()
 
-    full_dataset = datasets.ImageFolder(data_dir, transform=train_transform)
+    train_dataset = datasets.ImageFolder(data_dir, transform=train_transform)
+    val_dataset = datasets.ImageFolder(data_dir, transform=val_transform)
 
-    val_size = int(len(full_dataset) * val_split)
-    train_size = len(full_dataset) - val_size
+    total_size = len(train_dataset)
+    val_size = int(total_size * val_split)
+    train_size = total_size - val_size
 
     generator = torch.Generator().manual_seed(seed)
-    train_dataset, val_dataset = random_split(
-        full_dataset, [train_size, val_size], generator=generator
-        )
-    
-    val_dataset.dataset.transform = val_transform       #change the original dataset transform into validation transform
+    indices = torch.randperm(total_size, generator=generator).tolist()
+    train_indices = indices[:train_size]
+    val_indices = indices[train_size:]
 
-    train_loader  = DataLoader(train_dataset, shuffle=True, batch_size=batch_size)
-    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
+    train_subset = Subset(train_dataset, train_indices)
+    val_subset = Subset(val_dataset, val_indices)
 
-    class_name = full_dataset.classes
+    train_loader = DataLoader(train_subset, shuffle=True, batch_size=batch_size)
+    val_loader = DataLoader(val_subset, shuffle=False, batch_size=batch_size)
+    class_names = train_dataset.classes
+    return train_loader, val_loader, class_names, train_size, val_size
 
-    return train_loader, val_loader, class_name, train_size, val_size
 
 if __name__ == "__main__":
     train_loader, val_loader, class_names, train_size, val_size = get_dataloaders("data")
@@ -52,5 +54,5 @@ if __name__ == "__main__":
     print(f"Val size  : {val_size}")
 
     images, labels = next(iter(train_loader))
-    print(f"Batch shape: {images.shape}")   # expect [32, 3, 128, 128]
+    print(f"Batch shape: {images.shape}")   
     print(f"Labels     : {labels}")

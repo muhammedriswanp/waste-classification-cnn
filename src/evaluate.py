@@ -40,9 +40,8 @@ def evaluate(model_path):
     plt.savefig(cm_path, dpi=150)
     plt.close()
 
-    # --- Log to MLflow ---
     mlflow.set_experiment(cfg.EXPERIMENT_NAME)
-    with mlflow.start_run(run_name="evaluation"):
+    with mlflow.start_run(run_name=cfg.RUN_NAME):
         mlflow.log_artifact(cm_path)
         print("Logged to MLflow")
 
