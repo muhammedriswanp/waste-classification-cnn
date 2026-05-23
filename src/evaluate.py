@@ -10,10 +10,10 @@ from src.model  import WasteCNN
 import src.config as cfg 
 
 def evaluate(model_path):
-    _, val_loader, class_names, _, val_size = data.get_dataloaders("data")
+    _, val_loader, class_names, _, _ = data.get_dataloaders("data")
 
     model = WasteCNN().to(cfg.DEVICE)
-    model.load_state_dict(torch.load(model_path), map_location = cfg.DEVICE)
+    model.load_state_dict(torch.load(model_path))
 
     predicted, actual_labels = [], []
 
@@ -44,7 +44,6 @@ def evaluate(model_path):
     mlflow.set_experiment(cfg.EXPERIMENT_NAME)
     with mlflow.start_run(run_name="evaluation"):
         mlflow.log_artifact(cm_path)
-        mlflow.log_artifact(model_path)
         print("Logged to MLflow")
 
 

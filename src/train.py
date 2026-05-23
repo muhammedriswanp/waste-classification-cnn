@@ -1,21 +1,30 @@
 import mlflow
 import torch
 import torch.nn as nn
-from datetime import datetime 
 import os
 import mlflow.pytorch
 
 from src.data import *
 from src.config import *
 from src.model import WasteCNN
+from src.plot import plot_training_curves
 
 def train():
     train_loader, val_loader, class_names, train_size, val_size = get_dataloaders("data")
     print(f"Train: {train_size} | Val: {val_size} | Classes: {class_names}")
 
     model = WasteCNN().to(DEVICE)
+    if os.path.exists("models/best_model.pth"):
+        model.load_state_dict(torch.load("models/best_model.pth"))
+        print("Loaded previous best model")
+
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=LR)
+
+    train_losses = []
+    val_losses = []
+    train_accs = []
+    val_accs = []
 
     mlflow.set_experiment(EXPERIMENT_NAME)
 
@@ -24,7 +33,7 @@ def train():
     best_acc = float('-inf')
     patience_counter = 0
 
-    with mlflow.start_run(run_name=f"wasteCNN_lr{LR}_dropout{DROPOUT}"):
+    with mlflow.start_run(run_name=f"wasteCNN_lr{LR}_dropout{DROPOUT}5"):
 
         mlflow.log_params({
             "epochs":        EPOCHS,
@@ -50,6 +59,10 @@ def train():
             train_acc = correct / train_size * 100
             train_loss = running_loss / len(train_loader)
 
+            train_losses.append(train_loss)
+            train_accs.append(train_acc)
+
+
             model.eval()
             val_loss_total, val_correct = 0, 0
 
@@ -63,6 +76,9 @@ def train():
 
             val_acc  = val_correct / val_size * 100
             val_loss = val_loss_total / len(val_loader)
+
+            val_losses.append(val_loss)
+            val_accs.append(val_acc)
 
             mlflow.log_metrics({
                 "train_loss": train_loss,
@@ -86,9 +102,14 @@ def train():
             if patience_counter >= PATIENCE:
                 print(f"\n  Early stopping at epoch {epoch+1}")
                 break
+                
+        
+        curve_path = plot_training_curves(train_losses, val_losses, train_accs, val_accs)
+        mlflow.log_artifact(curve_path)
 
         model.load_state_dict(torch.load("models/best_model.pth"))
         mlflow.pytorch.log_model(model, name="best_model")
+        mlflow.log_artifact("models/best_model.pth")
         mlflow.log_metric("best_val_accuracy",best_acc)
 
         print("Train Completed")
